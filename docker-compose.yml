@@ -1,0 +1,43 @@
+# drought-indices as Docker services.
+#
+#   docker compose build
+#   docker compose run --rm pipeline                       # full run: download + prepare + compute
+#   docker compose run --rm pipeline update                # one monthly update
+#   docker compose run --rm pipeline compute --sources arc2 --engines xclim_pwm
+#   docker compose --profile scheduler up -d scheduler     # keep the indices current
+#
+# Settings come from the environment or an optional .env file (see .env.example).
+
+x-drought-indices: &drought-indices
+  image: ${DROUGHT_INDICES_IMAGE:-drought-indices:latest}
+  build:
+    context: .
+    args:
+      UV_EXTRAS: ${UV_EXTRAS:-}
+  # Run as the host user so that files written to the data directory belong to them.
+  # Rootless Docker/Podman already maps container root to the host user: use 0:0 there.
+  user: "${CONTAINER_USER:-1000:1000}"
+  env_file:
+    - path: .env
+      required: false
+  volumes:
+    - ${DATA_DIR:-./data}:/app/data
+    - ${CONFIG_FILE:-./config/config.json}:/app/config/config.json:ro
+
+services:
+  # One-off commands. The default runs the whole pipeline for every enabled source and engine;
+  # anything after the service name replaces it, e.g. `update` or `compute --refit`.
+  pipeline:
+    <<: *drought-indices
+    command: ["run"]
+
+  # Long-running: `update` now and then every UPDATE_INTERVAL_HOURS. Each update fetches new
+  # months, re-fetches the last two (provider revisions) and applies the stored parameters.
+  scheduler:
+    <<: *drought-indices
+    profiles: [scheduler]
+    entrypoint: ["drought-indices-scheduler"]
+    command: []
+    environment:
+      UPDATE_INTERVAL_HOURS: ${UPDATE_INTERVAL_HOURS:-24}
+    restart: unless-stopped

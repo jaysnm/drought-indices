@@ -1,0 +1,34 @@
+[project]
+name = "drought-indices"
+version = "0.1.0"
+description = "CHIRPS v3/v2, ARC2 and RFE2 rainfall over the ICPAC region, with SPI, SPEI and Palmer indices from climate_indices and xclim (APP/PWM) for benchmarking"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "climate-indices>=3.0",
+    "dask",
+    "lmoments3>=1.0.8",
+    "netcdf4",
+    "rasterio>=1.4",
+    "requests",
+    "rioxarray",
+    "xarray",
+    "xclim>=0.62",
+]
+
+[project.optional-dependencies]
+# ERA5-Land temperature (temperature.source: era5_land)
+era5 = ["cdsapi"]
+
+[project.scripts]
+drought-indices = "drought_indices.cli:main"
+
+[dependency-groups]
+dev = ["pytest"]
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
